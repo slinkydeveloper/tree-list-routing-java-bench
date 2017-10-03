@@ -82,103 +82,16 @@ function buildChartOptionsForTestsWithGroups(data, tests, groups) {
     }
 }
 
-function buildChartOptionsForTests(data, regexp1, regexp2, tests, label1, label2) {
-    let datasets = [];
-
-    let chartData1 =
-        data
-            .filter((value) => runRegex(regexp1, value.benchmark) != undefined)
-            .map((value) => ({
-                index: parseInt(runRegex(regexp1, value.benchmark)),
-                score: value.primaryMetric.score,
-                rawData: _.flatten(value.primaryMetric.rawData)
-            }));
-    chartData1.sort((a, b) => a.index - b.index);
-
-    datasets.push({
-        label: label1,
-        backgroundColor: "#ff0000",
-        borderColor: "#ff0000",
-        fill: false,
-        data: chartData1.map((value) => value.score)
-    });
-
-    for (let i = 0; i < chartData1[0].rawData.length; i++) {
-        datasets.push({
-            label: label1 + "-Iteration" + (i + 1),
-            backgroundColor: "rgba(255,0,0,0.3)",
-            borderColor: "rgba(255,0,0,0.3)",
-            fill: false,
-            data: chartData1.map((value) => value.rawData[i])
-        });
-    }
-
-    let chartData2 =
-        data
-            .filter((value) => runRegex(regexp2, value.benchmark) != undefined)
-            .map((value) => ({
-                index: parseInt(runRegex(regexp2, value.benchmark)),
-                score: value.primaryMetric.score,
-                rawData: _.flatten(value.primaryMetric.rawData)
-            }));
-    chartData2.sort((a, b) => a.index - b.index);
-
-    datasets.push({
-        label: label2,
-        backgroundColor: "#0000ff",
-        borderColor: "#0000ff",
-        fill: false,
-        data: chartData2.map((value) => value.score)
-    });
-
-    for (let i = 0; i < chartData2[0].rawData.length; i++) {
-        datasets.push({
-            label: label2 + "-Iteration" + (i + 1),
-            backgroundColor: "rgba(0,0,255,0.3)",
-            borderColor: "rgba(0,0,255,0.3)",
-            fill: false,
-            data: chartData2.map((value) => value.rawData[i])
-        });
-    }
-
-    return {
-        type: 'line',
-        data: {
-            labels: tests,
-            datasets: datasets
-        },
-        options: {
-            showLines: true,
-            lineTension: 0,
-            scales: {
-                xAxes: [{
-                    ticks: {
-                        fontSize: 12,
-                        display: true,
-                        autoSkip: false
-                    }
-                }]
-            },
-            legend: {
-                display: true,
-                labels: {
-                    filter: (l) => l.text == "Tree" || l.text == "List"
-                }
-            }
-        }
-    }
-}
-
-function buildChartOptionsForAverage(data, name1, name2, label1, label2) {
-    return {
+function buildChartOptionsForAverage(data, datasets) {
+    let obj = {
         type: 'bar',
         data: {
-            labels: [label1, label2],
+            labels: [],
             datasets: [
                 {
                     label: "Values",
-                    backgroundColor: ["#ff0000", "#0000ff"],
-                    data: [data.find((el) => el.benchmark == name1).primaryMetric.score, data.find((el) => el.benchmark == name2).primaryMetric.score]
+                    backgroundColor: [],
+                    data: []
                 }
             ]
         },
@@ -196,7 +109,13 @@ function buildChartOptionsForAverage(data, name1, name2, label1, label2) {
                 }]
             }
         }
+    };
+    for (let set of datasets) {
+        obj.data.labels.push(set.label);
+        obj.data.datasets[0].backgroundColor.push(set.color);
+        obj.data.datasets[0].data.push(data.find((el) => el.benchmark == set.name).primaryMetric.score);
     }
+    return obj;
 }
 
 function doChart(length, height, chartOptions, imageName) {
@@ -206,22 +125,58 @@ function doChart(length, height, chartOptions, imageName) {
             return chartNode.getImageStream('image/png');
         }).then(streamResult => {
         return chartNode.writeImageToFile('image/png', imageName);
+    }).catch(err => {
+        console.error(err)
     });
 }
 
-doChart(400, 800, buildChartOptionsForAverage(complex_data, "io.slinkydeveloper.bench.ComplexRegexBenchmark.treeRouting", "io.slinkydeveloper.bench.ComplexRegexBenchmark.skipListRouting", "Tree", "List"), "complex_average.png");
-doChart(400, 800, buildChartOptionsForAverage(social_data, "io.slinkydeveloper.bench.SocialNetworkBenchmark.treeRouting", "io.slinkydeveloper.bench.SocialNetworkBenchmark.skipListRouting", "Tree", "List"), "social_average.png");
+//doChart(400, 800, buildChartOptionsForAverage(complex_data, "io.slinkydeveloper.bench.ComplexRegexBenchmark.treeRouting", "io.slinkydeveloper.bench.ComplexRegexBenchmark.skipListRouting", "Tree", "List"), "complex_average.png");
+doChart(400, 800, buildChartOptionsForAverage(social_data,
+    [
+        {
+            "label": "Tree",
+            "name": "io.slinkydeveloper.bench.SocialNetworkBenchmark.treeRouting",
+            "color": "rgba(255, 0, 0, 1)"
+        },
+        {
+            "label": "List",
+            "name": "io.slinkydeveloper.bench.SocialNetworkBenchmark.skipListRouting",
+            "color": "rgba(0, 0, 255, 1)"
+        },
+        {
+            "label": "ECTree",
+            "name": "io.slinkydeveloper.bench.SocialNetworkBenchmark.ecTreeRouting",
+            "color": "rgba(0, 255, 0, 1)"
+        },
+        {
+            "label": "ImmutableECTree",
+            "name": "io.slinkydeveloper.bench.SocialNetworkBenchmark.immutableECTreeRouting",
+            "color": "rgba(255, 255, 0, 1)"
+        }
+    ]), "out/social_average.png");
 
 const basicGroups = [
     {
         label: "Tree",
-        regexp: /.*route([0-9]{1,2})Tree$/g,
+        regexp: /.*route([0-9]{1,2})TreeRouting$/g,
         mainColor: "rgba(255, 0, 0, 1)",
         transparentColor: "rgba(255, 0, 0, 0.3)"
     },
     {
+        label: "ECTree",
+        regexp: /.*route([0-9]{1,2})ECTreeRouting$/g,
+        mainColor: "rgba(0, 255, 0, 1)",
+        transparentColor: "rgba(0, 255, 0, 0.3)"
+    },
+    {
+        label: "ImmutableECTree",
+        regexp: /.*route([0-9]{1,2})immutableECTreeRouting$/g,
+        mainColor: "rgba(255, 255, 0, 1)",
+        transparentColor: "rgba(255, 255, 0, 0.3)"
+    },
+    {
         label: "List",
-        regexp: /.*route([0-9]{1,2})List$/g,
+        regexp: /.*route([0-9]{1,2})SkipListRouting$/g,
         mainColor: "rgba(0, 0, 255, 1)",
         transparentColor: "rgba(0, 0, 255, 0.3)"
     }
@@ -231,24 +186,38 @@ const withLoadGroups = [
     {
         label: "Tree with load",
         regexp: /.*route([0-9]{1,2})TreeWithLoad$/g,
-        mainColor: "rgba(255, 200, 0, 1)",
-        transparentColor: "rgba(255, 200, 0, 0.3)",
+        mainColor: "rgba(255, 150, 0, 1)",
+        transparentColor: "rgba(255, 150, 0, 0.3)",
+        scale: 11
+    },
+    {
+        label: "ECTree with load",
+        regexp: /.*route([0-9]{1,2})ECTreeWithLoad$/g,
+        mainColor: "rgba(150, 255, 0, 1)",
+        transparentColor: "rgba(150, 255, 0, 0.3)",
+        scale: 11
+    },
+    {
+        label: "ImmutableECTree with load",
+        regexp: /.*route([0-9]{1,2})immutableECTreeWithLoad$/g,
+        mainColor: "rgba(255, 255, 150, 1)",
+        transparentColor: "rgba(255, 255, 150, 0.3)",
         scale: 11
     },
     {
         label: "List with load",
         regexp: /.*route([0-9]{1,2})ListWithLoad$/g,
-        mainColor: "rgba(0, 255, 255, 1)",
-        transparentColor: "rgba(0, 255, 255, 0.3)",
+        mainColor: "rgba(0, 150, 255, 1)",
+        transparentColor: "rgba(0, 150, 255, 0.3)",
         scale: 11
     }
 ];
 
 const allGroups = basicGroups.concat(withLoadGroups);
 
-doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, basicGroups), "out/basic_complex.png");
-doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, withLoadGroups), "out/with_load_complex.png");
-doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, allGroups), "out/complex_complete.png");
+//doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, basicGroups), "out/basic_complex.png");
+//doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, withLoadGroups), "out/with_load_complex.png");
+//doChart(1200, 600, buildChartOptionsForTestsWithGroups(complex_data, complex_tests, allGroups), "out/complex_complete.png");
 
 doChart(2000, 600, buildChartOptionsForTestsWithGroups(social_data, social_tests, basicGroups), "out/basic_social.png");
 doChart(2000, 600, buildChartOptionsForTestsWithGroups(social_data, social_tests, withLoadGroups), "out/with_load_social.png");

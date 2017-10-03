@@ -35,11 +35,10 @@ import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 @Warmup(iterations = 10)
 @Measurement(iterations = 30)
-@Fork(3)
+@Fork(1)
 public class SocialNetworkBenchmark {
 
     @State(Scope.Thread)
@@ -47,117 +46,12 @@ public class SocialNetworkBenchmark {
 
         @Setup(Level.Iteration)
         public void doSetup() {
-            // I manually create the tree because the insertion algorithm It's dumb
-            // Root level
-            DummyNode root = new DummyNode("");
-            tree = new TreeRouter(root);
+            initializeTree();
+            initializeImmutableECTree();
+            initializeECTree();
+            initializeList();
 
-            // First level
-            DummyNode n11 = new DummyNode("/feed");
-            DummyNode n12 = new DummyNode("/users");
-            DummyNode n13 = new DummyNode("/posts");
-            DummyNode n14 = new DummyNode("/events");
-            DummyNode n15 = new DummyNode("/pages");
-
-            root.addNode(n11);
-            root.addNode(n12);
-            root.addNode(n13);
-            root.addNode(n14);
-            root.addNode(n15);
-
-            // Second level
-            DummyNode n12_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            DummyNode n12_2 = new DummyNode("/popular");
-            DummyNode n13_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            DummyNode n13_2 = new DummyNode("/popular");
-            DummyNode n14_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            DummyNode n14_2 = new DummyNode("/popular");
-            DummyNode n15_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            DummyNode n15_2 = new DummyNode("/popular");
-
-            n12.addNode(n12_1);
-            n12.addNode(n12_2);
-            n13.addNode(n13_1);
-            n13.addNode(n13_2);
-            n14.addNode(n14_1);
-            n14.addNode(n14_2);
-            n15.addNode(n15_1);
-            n15.addNode(n15_2);
-
-            // Third level
-            DummyNode n12_1_1 = new DummyNode("/events");
-            DummyNode n12_1_2 = new DummyNode("/likes");
-            DummyNode n12_1_3 = new DummyNode("/pages");
-            DummyNode n12_1_4 = new DummyNode("/friends");
-            DummyNode n12_1_5 = new DummyNode("/feed");
-
-            n12_1.addNode(n12_1_1);
-            n12_1.addNode(n12_1_2);
-            n12_1.addNode(n12_1_3);
-            n12_1.addNode(n12_1_4);
-            n12_1.addNode(n12_1_5);
-
-            DummyNode n13_1_1 = new DummyNode("/tagged");
-            DummyNode n13_1_2 = new DummyNode("/photos");
-
-            n13_1.addNode(n13_1_1);
-            n13_1.addNode(n13_1_2);
-
-            DummyNode n14_1_1 = new DummyNode("/partecipants");
-            DummyNode n14_1_2 = new DummyNode("/invited");
-            DummyNode n14_1_3 = new DummyNode("/feed");
-
-            n14_1.addNode(n14_1_1);
-            n14_1.addNode(n14_1_2);
-            n14_1.addNode(n14_1_3);
-
-            DummyNode n15_1_1 = new DummyNode("/likes");
-            DummyNode n15_1_2 = new DummyNode("/events");
-            DummyNode n15_1_3 = new DummyNode("/feed");
-
-            n15_1.addNode(n15_1_1);
-            n15_1.addNode(n15_1_2);
-            n15_1.addNode(n15_1_3);
-
-            // Forth level
-            DummyNode n13_1_2_1 = new DummyNode("\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            n13_1_2.addNode(n13_1_2_1);
-
-            DummyNode n15_1_3_1 = new DummyNode("\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
-            n15_1_3.addNode(n15_1_3_1);
-
-            // Now I initialize the list
-            list = new ListRouter();
-
-            list.add(new Route("/feed"));
-
-            list.add(new Route("/users/popular"));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/events", true));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/likes", true));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/pages", true));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/friends", true));
-            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
-
-            list.add(new Route("/posts/popular"));
-            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/tagged", true));
-            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/photos", true));
-            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/photos\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
-
-            list.add(new Route("/events/popular"));
-            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
-            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/partecipants", true));
-            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/invited", true));
-            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
-
-            list.add(new Route("/pages/popular"));
-            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
-            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/likes", true));
-            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/events", true));
-            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
-            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
-
-            // Now I initialize the list of compatible paths to mathc against
+            // Now I initialize the list of compatible paths to match against
             compatiblePaths = new ArrayList<>();
             probabilitiesForRandom = new ArrayList<>();
 
@@ -262,11 +156,285 @@ public class SocialNetworkBenchmark {
             Collections.shuffle(probabilitiesForRandom);
         }
 
+        private void initializeTree() {
+            // I manually create the tree because the insertion algorithm It's dumb
+            // Standard tree
+            // Root level
+            DummyNode root = new DummyNode("");
+            tree = new TreeRouter(root);
+
+            // First level
+            DummyNode n11 = new DummyNode("/feed");
+            DummyNode n12 = new DummyNode("/users");
+            DummyNode n13 = new DummyNode("/posts");
+            DummyNode n14 = new DummyNode("/events");
+            DummyNode n15 = new DummyNode("/pages");
+
+            root.addNode(n11);
+            root.addNode(n12);
+            root.addNode(n13);
+            root.addNode(n14);
+            root.addNode(n15);
+
+            // Second level
+            DummyNode n12_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            DummyNode n12_2 = new DummyNode("/popular");
+            DummyNode n13_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            DummyNode n13_2 = new DummyNode("/popular");
+            DummyNode n14_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            DummyNode n14_2 = new DummyNode("/popular");
+            DummyNode n15_1 = new DummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            DummyNode n15_2 = new DummyNode("/popular");
+
+            n12.addNode(n12_1);
+            n12.addNode(n12_2);
+            n13.addNode(n13_1);
+            n13.addNode(n13_2);
+            n14.addNode(n14_1);
+            n14.addNode(n14_2);
+            n15.addNode(n15_1);
+            n15.addNode(n15_2);
+
+            // Third level
+            DummyNode n12_1_1 = new DummyNode("/events");
+            DummyNode n12_1_2 = new DummyNode("/likes");
+            DummyNode n12_1_3 = new DummyNode("/pages");
+            DummyNode n12_1_4 = new DummyNode("/friends");
+            DummyNode n12_1_5 = new DummyNode("/feed");
+
+            n12_1.addNode(n12_1_1);
+            n12_1.addNode(n12_1_2);
+            n12_1.addNode(n12_1_3);
+            n12_1.addNode(n12_1_4);
+            n12_1.addNode(n12_1_5);
+
+            DummyNode n13_1_1 = new DummyNode("/tagged");
+            DummyNode n13_1_2 = new DummyNode("/photos");
+
+            n13_1.addNode(n13_1_1);
+            n13_1.addNode(n13_1_2);
+
+            DummyNode n14_1_1 = new DummyNode("/partecipants");
+            DummyNode n14_1_2 = new DummyNode("/invited");
+            DummyNode n14_1_3 = new DummyNode("/feed");
+
+            n14_1.addNode(n14_1_1);
+            n14_1.addNode(n14_1_2);
+            n14_1.addNode(n14_1_3);
+
+            DummyNode n15_1_1 = new DummyNode("/likes");
+            DummyNode n15_1_2 = new DummyNode("/events");
+            DummyNode n15_1_3 = new DummyNode("/feed");
+
+            n15_1.addNode(n15_1_1);
+            n15_1.addNode(n15_1_2);
+            n15_1.addNode(n15_1_3);
+
+            // Forth level
+            DummyNode n13_1_2_1 = new DummyNode("\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n13_1_2.addNode(n13_1_2_1);
+
+            DummyNode n15_1_3_1 = new DummyNode("\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n15_1_3.addNode(n15_1_3_1);
+        }
+
+        private void initializeImmutableECTree() {
+            // Root level
+            ImmutableECDummyNode root = new ImmutableECDummyNode("");
+            immutableECTreeRouter = new ImmutableECTreeRouter(root);
+
+            // First level
+            ImmutableECDummyNode n11 = new ImmutableECDummyNode("/feed");
+            ImmutableECDummyNode n12 = new ImmutableECDummyNode("/users");
+            ImmutableECDummyNode n13 = new ImmutableECDummyNode("/posts");
+            ImmutableECDummyNode n14 = new ImmutableECDummyNode("/events");
+            ImmutableECDummyNode n15 = new ImmutableECDummyNode("/pages");
+
+            root.addNode(n11);
+            root.addNode(n12);
+            root.addNode(n13);
+            root.addNode(n14);
+            root.addNode(n15);
+
+            // Second level
+            ImmutableECDummyNode n12_1 = new ImmutableECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ImmutableECDummyNode n12_2 = new ImmutableECDummyNode("/popular");
+            ImmutableECDummyNode n13_1 = new ImmutableECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ImmutableECDummyNode n13_2 = new ImmutableECDummyNode("/popular");
+            ImmutableECDummyNode n14_1 = new ImmutableECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ImmutableECDummyNode n14_2 = new ImmutableECDummyNode("/popular");
+            ImmutableECDummyNode n15_1 = new ImmutableECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ImmutableECDummyNode n15_2 = new ImmutableECDummyNode("/popular");
+
+            n12.addNode(n12_1);
+            n12.addNode(n12_2);
+            n13.addNode(n13_1);
+            n13.addNode(n13_2);
+            n14.addNode(n14_1);
+            n14.addNode(n14_2);
+            n15.addNode(n15_1);
+            n15.addNode(n15_2);
+
+            // Third level
+            ImmutableECDummyNode n12_1_1 = new ImmutableECDummyNode("/events");
+            ImmutableECDummyNode n12_1_2 = new ImmutableECDummyNode("/likes");
+            ImmutableECDummyNode n12_1_3 = new ImmutableECDummyNode("/pages");
+            ImmutableECDummyNode n12_1_4 = new ImmutableECDummyNode("/friends");
+            ImmutableECDummyNode n12_1_5 = new ImmutableECDummyNode("/feed");
+
+            n12_1.addNode(n12_1_1);
+            n12_1.addNode(n12_1_2);
+            n12_1.addNode(n12_1_3);
+            n12_1.addNode(n12_1_4);
+            n12_1.addNode(n12_1_5);
+
+            ImmutableECDummyNode n13_1_1 = new ImmutableECDummyNode("/tagged");
+            ImmutableECDummyNode n13_1_2 = new ImmutableECDummyNode("/photos");
+
+            n13_1.addNode(n13_1_1);
+            n13_1.addNode(n13_1_2);
+
+            ImmutableECDummyNode n14_1_1 = new ImmutableECDummyNode("/partecipants");
+            ImmutableECDummyNode n14_1_2 = new ImmutableECDummyNode("/invited");
+            ImmutableECDummyNode n14_1_3 = new ImmutableECDummyNode("/feed");
+
+            n14_1.addNode(n14_1_1);
+            n14_1.addNode(n14_1_2);
+            n14_1.addNode(n14_1_3);
+
+            ImmutableECDummyNode n15_1_1 = new ImmutableECDummyNode("/likes");
+            ImmutableECDummyNode n15_1_2 = new ImmutableECDummyNode("/events");
+            ImmutableECDummyNode n15_1_3 = new ImmutableECDummyNode("/feed");
+
+            n15_1.addNode(n15_1_1);
+            n15_1.addNode(n15_1_2);
+            n15_1.addNode(n15_1_3);
+
+            // Forth level
+            ImmutableECDummyNode n13_1_2_1 = new ImmutableECDummyNode("\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n13_1_2.addNode(n13_1_2_1);
+
+            ImmutableECDummyNode n15_1_3_1 = new ImmutableECDummyNode("\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n15_1_3.addNode(n15_1_3_1);
+
+            immutableECTreeRouter.lockTree();
+        }
+
+        private void initializeECTree() {
+            // Root level
+            ECDummyNode root = new ECDummyNode("");
+            ecTreeRouter = new ECTreeRouter(root);
+
+            // First level
+            ECDummyNode n11 = new ECDummyNode("/feed");
+            ECDummyNode n12 = new ECDummyNode("/users");
+            ECDummyNode n13 = new ECDummyNode("/posts");
+            ECDummyNode n14 = new ECDummyNode("/events");
+            ECDummyNode n15 = new ECDummyNode("/pages");
+
+            root.addNode(n11);
+            root.addNode(n12);
+            root.addNode(n13);
+            root.addNode(n14);
+            root.addNode(n15);
+
+            // Second level
+            ECDummyNode n12_1 = new ECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ECDummyNode n12_2 = new ECDummyNode("/popular");
+            ECDummyNode n13_1 = new ECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ECDummyNode n13_2 = new ECDummyNode("/popular");
+            ECDummyNode n14_1 = new ECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ECDummyNode n14_2 = new ECDummyNode("/popular");
+            ECDummyNode n15_1 = new ECDummyNode("\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            ECDummyNode n15_2 = new ECDummyNode("/popular");
+
+            n12.addNode(n12_1);
+            n12.addNode(n12_2);
+            n13.addNode(n13_1);
+            n13.addNode(n13_2);
+            n14.addNode(n14_1);
+            n14.addNode(n14_2);
+            n15.addNode(n15_1);
+            n15.addNode(n15_2);
+
+            // Third level
+            ECDummyNode n12_1_1 = new ECDummyNode("/events");
+            ECDummyNode n12_1_2 = new ECDummyNode("/likes");
+            ECDummyNode n12_1_3 = new ECDummyNode("/pages");
+            ECDummyNode n12_1_4 = new ECDummyNode("/friends");
+            ECDummyNode n12_1_5 = new ECDummyNode("/feed");
+
+            n12_1.addNode(n12_1_1);
+            n12_1.addNode(n12_1_2);
+            n12_1.addNode(n12_1_3);
+            n12_1.addNode(n12_1_4);
+            n12_1.addNode(n12_1_5);
+
+            ECDummyNode n13_1_1 = new ECDummyNode("/tagged");
+            ECDummyNode n13_1_2 = new ECDummyNode("/photos");
+
+            n13_1.addNode(n13_1_1);
+            n13_1.addNode(n13_1_2);
+
+            ECDummyNode n14_1_1 = new ECDummyNode("/partecipants");
+            ECDummyNode n14_1_2 = new ECDummyNode("/invited");
+            ECDummyNode n14_1_3 = new ECDummyNode("/feed");
+
+            n14_1.addNode(n14_1_1);
+            n14_1.addNode(n14_1_2);
+            n14_1.addNode(n14_1_3);
+
+            ECDummyNode n15_1_1 = new ECDummyNode("/likes");
+            ECDummyNode n15_1_2 = new ECDummyNode("/events");
+            ECDummyNode n15_1_3 = new ECDummyNode("/feed");
+
+            n15_1.addNode(n15_1_1);
+            n15_1.addNode(n15_1_2);
+            n15_1.addNode(n15_1_3);
+
+            // Forth level
+            ECDummyNode n13_1_2_1 = new ECDummyNode("\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n13_1_2.addNode(n13_1_2_1);
+
+            ECDummyNode n15_1_3_1 = new ECDummyNode("\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true);
+            n15_1_3.addNode(n15_1_3_1);
+        }
+
+        private void initializeList() {
+            // Now I initialize the list
+            list = new ListRouter();
+
+            list.add(new Route("/feed"));
+
+            list.add(new Route("/users/popular"));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/events", true));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/likes", true));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/pages", true));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/friends", true));
+            list.add(new Route("\\/users\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
+
+            list.add(new Route("/posts/popular"));
+            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/tagged", true));
+            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/photos", true));
+            list.add(new Route("\\/posts\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/photos\\/(?<photoid>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
+
+            list.add(new Route("/events/popular"));
+            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
+            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/partecipants", true));
+            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/invited", true));
+            list.add(new Route("\\/events\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
+
+            list.add(new Route("/pages/popular"));
+            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
+            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/likes", true));
+            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/events", true));
+            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed", true));
+            list.add(new Route("\\/pages\\/(?<id>[a-zA-Z][a-zA-Z0-9]{3,20})\\/feed\\/(?<postid>[a-zA-Z][a-zA-Z0-9]{3,20})", true));
+        }
+
         @Setup(Level.Invocation)
         public void switchElement() {
-            path = compatiblePaths.get(i);
-            i = (i + 1) % 7;
-
             randomPath = compatiblePaths.get(
                     probabilitiesForRandom.get(
                             new Random().nextInt(probabilitiesForRandom.size())
@@ -274,16 +442,16 @@ public class SocialNetworkBenchmark {
             );
         }
 
-        public boolean treeRouting() {
-            return tree.route(path);
-        }
-
-        public boolean skipListRouting() {
-            return list.route(path);
-        }
-
         public boolean treeRouting(String path) {
             return tree.route(path);
+        }
+
+        public boolean immutableECTreeRouting(String path) {
+            return immutableECTreeRouter.route(path);
+        }
+
+        public boolean ecTreeRouting(String path) {
+            return ecTreeRouter.route(path);
         }
 
         public boolean skipListRouting(String path) {
@@ -292,9 +460,9 @@ public class SocialNetworkBenchmark {
 
         TreeRouter tree;
         ListRouter list;
+        ImmutableECTreeRouter immutableECTreeRouter;
+        ECTreeRouter ecTreeRouter;
 
-        int i = 0;
-        String path;
         String randomPath;
         List<String> compatiblePaths;
 
@@ -303,12 +471,42 @@ public class SocialNetworkBenchmark {
 
     @Benchmark @BenchmarkMode(Mode.Throughput) @Measurement(iterations = 100)
     public void treeRouting(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting());
+        bh.consume(routers.treeRouting(routers.randomPath));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput) @Measurement(iterations = 100)
     public void skipListRouting(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting());
+        bh.consume(routers.skipListRouting(routers.randomPath));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput) @Measurement(iterations = 100)
+    public void immutableECTreeRouting(Routers routers, Blackhole bh) {
+        bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput) @Measurement(iterations = 100)
+    public void ecTreeRouting(Routers routers, Blackhole bh) {
+        bh.consume(routers.ecTreeRouting(routers.randomPath));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1TreeRouting(Routers routers) {
+        routers.treeRouting("/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1SkipListRouting(Routers routers) {
+        routers.skipListRouting("/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -318,19 +516,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route1immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route1ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/feed"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route1Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/feed"));
+    public void route2TreeRouting(Routers routers) {
+        routers.treeRouting("/users/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route1List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/feed"));
+    public void route2ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route2immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route2SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -340,19 +560,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route2ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route2immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route2ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/popular"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route2Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/popular"));
+    public void route3TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route2List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/popular"));
+    public void route3ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route3immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route3SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -362,19 +604,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route3ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route3immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route3ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route3Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1"));
+    public void route4TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1/events");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route3List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1"));
+    public void route4ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1/events");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route4immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1/events");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route4SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1/events");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -384,19 +648,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route4ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1/events"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route4immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1/events"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route4ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1/events"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route4Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1/events"));
+    public void route5TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1/likes");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route4List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1/events"));
+    public void route5ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1/likes");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route5immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1/likes");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route5SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1/likes");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -406,19 +692,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route5ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1/likes"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route5immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1/likes"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route5ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1/likes"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route5Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1/likes"));
+    public void route6TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1/pages");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route5List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1/likes"));
+    public void route6ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1/pages");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route6immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1/pages");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route6SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1/pages");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -428,19 +736,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route6ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1/pages"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route6immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1/pages"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route6ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1/pages"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route6Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1/pages"));
+    public void route7TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1/friends");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route6List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1/pages"));
+    public void route7ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1/friends");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route7immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1/friends");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route7SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1/friends");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -450,19 +780,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route7ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1/friends"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route7immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1/friends"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route7ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1/friends"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route7Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1/friends"));
+    public void route8TreeRouting(Routers routers) {
+        routers.treeRouting("/users/user1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route7List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1/friends"));
+    public void route8ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/users/user1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route8immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/users/user1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route8SkipListRouting(Routers routers) {
+        routers.skipListRouting("/users/user1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -472,19 +824,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route8ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/users/user1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route8immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/users/user1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route8ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/users/user1/feed"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route8Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/users/user1/feed"));
+    public void route9TreeRouting(Routers routers) {
+        routers.treeRouting("/posts/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route8List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/users/user1/feed"));
+    public void route9ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/posts/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route9immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/posts/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route9SkipListRouting(Routers routers) {
+        routers.skipListRouting("/posts/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -494,19 +868,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route9ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/posts/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route9immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/posts/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route9ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/posts/popular"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route9Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/posts/popular"));
+    public void route10TreeRouting(Routers routers) {
+        routers.treeRouting("/posts/post1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route9List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/posts/popular"));
+    public void route10ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/posts/post1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route10immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/posts/post1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route10SkipListRouting(Routers routers) {
+        routers.skipListRouting("/posts/post1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -516,19 +912,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route10ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/posts/post1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route10immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/posts/post1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route10ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/posts/post1"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route10Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/posts/post1"));
+    public void route11TreeRouting(Routers routers) {
+        routers.treeRouting("/posts/post1/tagged");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route10List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/posts/post1"));
+    public void route11ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/posts/post1/tagged");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route11immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/posts/post1/tagged");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route11SkipListRouting(Routers routers) {
+        routers.skipListRouting("/posts/post1/tagged");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -538,19 +956,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route11ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/posts/post1/tagged"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route11immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/posts/post1/tagged"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route11ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/posts/post1/tagged"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route11Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/posts/post1/tagged"));
+    public void route12TreeRouting(Routers routers) {
+        routers.treeRouting("/posts/post1/photos");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route11List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/posts/post1/tagged"));
+    public void route12ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/posts/post1/photos");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route12immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/posts/post1/photos");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route12SkipListRouting(Routers routers) {
+        routers.skipListRouting("/posts/post1/photos");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -560,19 +1000,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route12ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/posts/post1/photos"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route12immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/posts/post1/photos"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route12ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/posts/post1/photos"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route12Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/posts/post1/photos"));
+    public void route13TreeRouting(Routers routers) {
+        routers.treeRouting("/posts/post1/photos/photo1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route12List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/posts/post1/photos"));
+    public void route13ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/posts/post1/photos/photo1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route13immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/posts/post1/photos/photo1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route13SkipListRouting(Routers routers) {
+        routers.skipListRouting("/posts/post1/photos/photo1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -582,19 +1044,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route13ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/posts/post1/photos/photo1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route13immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/posts/post1/photos/photo1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route13ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/posts/post1/photos/photo1"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route13Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/posts/post1/photos/photo1"));
+    public void route14TreeRouting(Routers routers) {
+        routers.treeRouting("/events/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route13List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/posts/post1/photos/photo1"));
+    public void route14ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/events/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route14immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/events/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route14SkipListRouting(Routers routers) {
+        routers.skipListRouting("/events/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -604,19 +1088,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route14ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/events/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route14immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/events/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route14ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/events/popular"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route14Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/events/popular"));
+    public void route15TreeRouting(Routers routers) {
+        routers.treeRouting("/events/event1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route14List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/events/popular"));
+    public void route15ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/events/event1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route15immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/events/event1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route15SkipListRouting(Routers routers) {
+        routers.skipListRouting("/events/event1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -626,19 +1132,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route15ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/events/event1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route15immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/events/event1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route15ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/events/event1"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route15Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/events/event1"));
+    public void route16TreeRouting(Routers routers) {
+        routers.treeRouting("/events/event1/partecipants");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route15List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/events/event1"));
+    public void route16ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/events/event1/partecipants");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route16immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/events/event1/partecipants");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route16SkipListRouting(Routers routers) {
+        routers.skipListRouting("/events/event1/partecipants");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -648,19 +1176,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route16ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/events/event1/partecipants"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route16immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/events/event1/partecipants"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route16ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/events/event1/partecipants"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route16Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/events/event1/partecipants"));
+    public void route17TreeRouting(Routers routers) {
+        routers.treeRouting("/events/event1/invited");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route16List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/events/event1/partecipants"));
+    public void route17ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/events/event1/invited");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route17immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/events/event1/invited");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route17SkipListRouting(Routers routers) {
+        routers.skipListRouting("/events/event1/invited");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -670,19 +1220,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route17ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/events/event1/invited"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route17immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/events/event1/invited"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route17ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/events/event1/invited"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route17Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/events/event1/invited"));
+    public void route18TreeRouting(Routers routers) {
+        routers.treeRouting("/events/event1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route17List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/events/event1/invited"));
+    public void route18ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/events/event1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route18immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/events/event1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route18SkipListRouting(Routers routers) {
+        routers.skipListRouting("/events/event1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -692,19 +1264,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route18ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/events/event1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route18immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/events/event1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route18ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/events/event1/feed"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route18Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/events/event1/feed"));
+    public void route19TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route18List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/events/event1/feed"));
+    public void route19ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route19immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/popular");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route19SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/popular");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -714,19 +1308,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route19ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route19immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/popular"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route19ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/popular"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route19Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/popular"));
+    public void route20TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/page1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route19List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/popular"));
+    public void route20ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/page1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route20immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/page1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route20SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/page1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -736,19 +1352,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route20ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/page1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route20immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/page1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route20ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/page1"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route20Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/page1"));
+    public void route21TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/page1/likes");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route20List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/page1"));
+    public void route21ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/page1/likes");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route21immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/page1/likes");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route21SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/page1/likes");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -758,19 +1396,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route21ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/page1/likes"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route21immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/page1/likes"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route21ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/page1/likes"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route21Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/page1/likes"));
+    public void route22TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/page1/events");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route21List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/page1/likes"));
+    public void route22ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/page1/events");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route22immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/page1/events");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route22SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/page1/events");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -780,19 +1440,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route22ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/page1/events"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route22immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/page1/events"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route22ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/page1/events"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route22Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/page1/events"));
+    public void route23TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/page1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route22List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/page1/events"));
+    public void route23ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/page1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route23immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/page1/feed");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route23SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/page1/feed");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -802,19 +1484,41 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route23ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/page1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route23immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/page1/feed"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route23ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/page1/feed"));
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route23Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/page1/feed"));
+    public void route24TreeRouting(Routers routers) {
+        routers.treeRouting("/pages/page1/feed/post1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route23List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/page1/feed"));
+    public void route24ECTreeRouting(Routers routers) {
+        routers.ecTreeRouting("/pages/page1/feed/post1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route24immutableECTreeRouting(Routers routers) {
+        routers.immutableECTreeRouting("/pages/page1/feed/post1");
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route24SkipListRouting(Routers routers) {
+        routers.skipListRouting("/pages/page1/feed/post1");
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
@@ -824,21 +1528,21 @@ public class SocialNetworkBenchmark {
     }
 
     @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route24ECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.ecTreeRouting(routers.randomPath));
+        bh.consume(routers.ecTreeRouting("/pages/page1/feed/post1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
+    public void route24immutableECTreeWithLoad(Routers routers, Blackhole bh) {
+        for (int i = 0; i < 10; i++) bh.consume(routers.immutableECTreeRouting(routers.randomPath));
+        bh.consume(routers.immutableECTreeRouting("/pages/page1/feed/post1"));
+    }
+
+    @Benchmark @BenchmarkMode(Mode.Throughput)
     public void route24ListWithLoad(Routers routers, Blackhole bh) {
         for (int i = 0; i < 10; i++) bh.consume(routers.skipListRouting(routers.randomPath));
         bh.consume(routers.skipListRouting("/pages/page1/feed/post1"));
     }
-
-    @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route24Tree(Routers routers, Blackhole bh) {
-        bh.consume(routers.treeRouting("/pages/page1/feed/post1"));
-    }
-
-    @Benchmark @BenchmarkMode(Mode.Throughput)
-    public void route24List(Routers routers, Blackhole bh) {
-        bh.consume(routers.skipListRouting("/pages/page1/feed/post1"));
-    }
-
-
 
 }
