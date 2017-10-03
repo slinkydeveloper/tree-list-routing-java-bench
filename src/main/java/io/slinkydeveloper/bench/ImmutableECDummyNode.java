@@ -89,8 +89,8 @@ public class ImmutableECDummyNode implements Comparable {
     }
 
     public void setImmutable() {
-        constant_paths = constant_paths_construction.toImmutable();
-        regexes = regexes_construction.toImmutable();
+        constant_paths = Lists.immutable.ofAll(constant_paths_construction);
+        regexes = Lists.immutable.ofAll(regexes_construction);
         for (ImmutableECDummyNode e : constant_paths) {
             e.setImmutable();
         }
